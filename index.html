@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exempĺo de Agendamento para Retirada de Medicamentos</title>
+    <title>Agendamento - Retirada de Medicamentos</title>
     <style>
         :root {
             --primary-color: #0056b3;
@@ -28,15 +28,33 @@
             width: 100%;
             max-width: 600px;
         }
-        h2 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 20px;
-        }
         
-        /* === NOVO: Estilos da Caixa de Instruções === */
+        /* === NOVO: Estilos do Cabeçalho com o Brasão === */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 15px;
+            gap: 15px;
+        }
+        .header-container h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 24px;
+            text-align: left;
+            flex: 1;
+        }
+        .logo-brasao {
+            max-height: 75px; /* Controla o tamanho máximo do brasão */
+            max-width: 100px;
+            object-fit: contain;
+        }
+
+        /* Estilos da Caixa de Instruções */
         .instructions {
-            background-color: #e9f5ff; /* Azul bem claro e suave */
+            background-color: #e9f5ff; 
             border-left: 4px solid var(--primary-color);
             padding: 15px 20px;
             margin-bottom: 25px;
@@ -204,10 +222,14 @@
 <body>
 
 <div class="container">
-    <h2>Agendamento - Farmácia Municipal (Exemplo/Teste)</h2>
     
+    <div class="header-container">
+        <h2>Agendamento - Farmácia Municipal (Exemplo/Teste)</h2>
+        <img src="https://raw.githubusercontent.com/andersomyoshi/exfar/refs/heads/main/1783042716892.png" alt="Brasão" class="logo-brasao">
+    </div>
+
     <div class="instructions">
-        <p><strong>Bem-vindo ao canal de agendamento da Farmácia Municipal.</strong></p>
+        <p><strong>Bem-vindo ao canal de agendamento da Farmácia Municipal de Yoshiopolis.</strong></p>
         <p class="highlight-danger">Favor ler as orientações com atenção!</p>
         <p>A solicitação de agendamento é feita somente por esse link.</p>
         <p>Preencha todos os dados corretamente e aguarde nosso contato pelo WhatsApp. Informações incorretas ou incompletas podem causar atrasos no atendimento. A confirmação do seu agendamento será realizada via WhatsApp, utilizando o número informado no cadastro.</p>
@@ -234,6 +256,7 @@
         
         <p><em>Agradecemos sua colaboração.</em></p>
     </div>
+
     <form id="agendamentoForm">
         
         <div class="form-group">
@@ -273,10 +296,10 @@
             <label for="ubs">UBS de Referência</label>
             <select id="ubs" required>
                 <option value="">Selecione a UBS...</option>
-                <option value="ubs-jardim-john-kennedy">UBS Jardim John Kennedy</option>
-                <option value="ubs-centro">UBS Centro</option>
-                <option value="ubs-serraia">UBS Serraia</option>
-                <option value="ubs-san-rafael">UBS San Rafael</option>
+                <option value="ubs-jardim-john-kennedy">UBS Sky-High Heights</option>
+                <option value="ubs-centro">UBS Ninjarama</option>
+                <option value="ubs-serraia">UBS Acorn Forest</option>
+                <option value="ubs-san-rafael">UBS Dino Desert</option>
             </select>
         </div>
 

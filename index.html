@@ -143,17 +143,18 @@
             color: white;
         }
         
-        /* Estilos para os horários já agendados */
+        /* === NOVO: Estilos para os horários já agendados em Vermelho === */
         .time-slot.booked {
-            background-color: #e9ecef;
-            color: #adb5bd;
-            border-color: #dee2e6;
+            background-color: #dc3545; /* Vermelho */
+            color: white;
+            border-color: #b02a37;
             cursor: not-allowed;
             text-decoration: line-through;
+            font-weight: bold;
         }
         .time-slot.booked:hover {
-            background-color: #e9ecef;
-            color: #adb5bd;
+            background-color: #dc3545; /* Mantém o vermelho ao tentar clicar */
+            color: white;
         }
 
         .close-modal {
@@ -289,8 +290,7 @@
         campo.value = v;
     }
 
-    // === Simulação de Banco de Dados (LocalStorage) ===
-    // Quando plugar o Firebase, basta alterar estas duas funções
+    // === Sistema de Histórico (LocalStorage) ===
     function getHorariosOcupados(data) {
         const agendamentos = JSON.parse(localStorage.getItem('bancoAgendamentosFarmacia')) || {};
         return agendamentos[data] || [];
@@ -301,8 +301,11 @@
         if (!agendamentos[data]) {
             agendamentos[data] = [];
         }
-        agendamentos[data].push(horario);
-        localStorage.setItem('bancoAgendamentosFarmacia', JSON.stringify(agendamentos));
+        // Evita duplicar o mesmo horário no histórico
+        if (!agendamentos[data].includes(horario)) {
+            agendamentos[data].push(horario);
+            localStorage.setItem('bancoAgendamentosFarmacia', JSON.stringify(agendamentos));
+        }
     }
 
     // === Variáveis Globais de UI ===
@@ -313,8 +316,8 @@
         const modalDateInput = document.getElementById('modalDate');
         if(!modalDateInput.value) {
             modalDateInput.value = modalDateInput.getAttribute('min');
-            generateTimeSlots();
         }
+        generateTimeSlots(); // Garante que a grade carregue com os vermelhos atualizados
     }
 
     function closeModal() {
@@ -341,14 +344,14 @@
                 slot.className = 'time-slot';
                 slot.innerText = timeString;
                 
-                // Verifica se este horário específico já está no banco de dados local
+                // Se o horário estiver no histórico salvo
                 if (horariosOcupadosHoje.includes(timeString)) {
-                    slot.classList.add('booked');
+                    slot.classList.add('booked'); // Aplica a classe que deixa vermelho
                     slot.onclick = function() {
-                        alert('⚠️ Atenção: A data e o horário selecionados já estão agendados para outro paciente. Por favor, escolha um horário disponível.');
+                        alert('⚠️ Este horário já está reservado para outro paciente. Escolha uma opção disponível.');
                     };
                 } else {
-                    // Comportamento normal para horários livres
+                    // Horário livre
                     slot.onclick = function() {
                         document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
                         this.classList.add('selected');
@@ -380,7 +383,7 @@
         closeModal();
     }
 
-    // === Inicialização e Envio (WhatsApp) ===
+    // === Inicialização e Envio ===
     document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         const offset = now.getTimezoneOffset() * 60000;
@@ -421,7 +424,7 @@
                     }
                 }
 
-                // Salva o horário no banco de dados local para bloqueá-lo nas próximas aberturas do modal
+                // 🔴 Salva o horário no histórico local e bloqueia para os próximos envios
                 salvarHorarioOcupado(dataRaw, hora);
 
                 let numeroLimpo = telefone.replace(/\D/g, '');
@@ -450,7 +453,7 @@ Por favor, compareça à unidade com seu documento em mãos.`;
                 const textoCodificado = encodeURIComponent(mensagem);
                 const urlWhatsApp = `https://wa.me/${numeroLimpo}?text=${textoCodificado}`;
 
-                alert('Agendamento concluído! Você será redirecionado para o WhatsApp para salvar seu comprovante.');
+                alert('Agendamento concluído! O horário agora está bloqueado em vermelho e você será redirecionado para o WhatsApp.');
                 window.open(urlWhatsApp, '_blank');
                 
                 form.reset();

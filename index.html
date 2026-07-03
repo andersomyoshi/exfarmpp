@@ -142,6 +142,20 @@
             background-color: var(--primary-color);
             color: white;
         }
+        
+        /* Estilos para os horários já agendados */
+        .time-slot.booked {
+            background-color: #e9ecef;
+            color: #adb5bd;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+        .time-slot.booked:hover {
+            background-color: #e9ecef;
+            color: #adb5bd;
+        }
+
         .close-modal {
             float: right;
             cursor: pointer;
@@ -275,6 +289,22 @@
         campo.value = v;
     }
 
+    // === Simulação de Banco de Dados (LocalStorage) ===
+    // Quando plugar o Firebase, basta alterar estas duas funções
+    function getHorariosOcupados(data) {
+        const agendamentos = JSON.parse(localStorage.getItem('bancoAgendamentosFarmacia')) || {};
+        return agendamentos[data] || [];
+    }
+
+    function salvarHorarioOcupado(data, horario) {
+        const agendamentos = JSON.parse(localStorage.getItem('bancoAgendamentosFarmacia')) || {};
+        if (!agendamentos[data]) {
+            agendamentos[data] = [];
+        }
+        agendamentos[data].push(horario);
+        localStorage.setItem('bancoAgendamentosFarmacia', JSON.stringify(agendamentos));
+    }
+
     // === Variáveis Globais de UI ===
     let selectedTime = null;
 
@@ -282,7 +312,6 @@
         document.getElementById('scheduleModal').style.display = 'flex';
         const modalDateInput = document.getElementById('modalDate');
         if(!modalDateInput.value) {
-            // Usa o dia mínimo configurado pelo DOMContentLoaded
             modalDateInput.value = modalDateInput.getAttribute('min');
             generateTimeSlots();
         }
@@ -297,6 +326,9 @@
         grid.innerHTML = ''; 
         selectedTime = null;
 
+        const dataSelecionada = document.getElementById('modalDate').value;
+        const horariosOcupadosHoje = getHorariosOcupados(dataSelecionada);
+
         const startHour = 8;
         const endHour = 16;
         
@@ -309,11 +341,20 @@
                 slot.className = 'time-slot';
                 slot.innerText = timeString;
                 
-                slot.onclick = function() {
-                    document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
-                    this.classList.add('selected');
-                    selectedTime = timeString;
-                };
+                // Verifica se este horário específico já está no banco de dados local
+                if (horariosOcupadosHoje.includes(timeString)) {
+                    slot.classList.add('booked');
+                    slot.onclick = function() {
+                        alert('⚠️ Atenção: A data e o horário selecionados já estão agendados para outro paciente. Por favor, escolha um horário disponível.');
+                    };
+                } else {
+                    // Comportamento normal para horários livres
+                    slot.onclick = function() {
+                        document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+                        this.classList.add('selected');
+                        selectedTime = timeString;
+                    };
+                }
                 
                 grid.appendChild(slot);
             }
@@ -323,7 +364,7 @@
     function confirmSchedule() {
         const date = document.getElementById('modalDate').value;
         if(!date || !selectedTime) {
-            alert('Por favor, escolha uma data no calendário e clique num dos horários.');
+            alert('Por favor, escolha uma data no calendário e clique num dos horários disponíveis.');
             return;
         }
 
@@ -332,14 +373,15 @@
 
         document.getElementById('dataAgendada').value = date;
         document.getElementById('horarioAgendado').value = selectedTime;
+        document.getElementById('dataAgendada').setAttribute('data-formatada', formattedDate);
+        
         document.getElementById('selectedDateTime').innerText = `✅ Agendado para: ${formattedDate} às ${selectedTime}`;
         
         closeModal();
     }
 
-    // === Inicialização Segura (Corrige bugs no GitHub Pages) ===
+    // === Inicialização e Envio (WhatsApp) ===
     document.addEventListener('DOMContentLoaded', function() {
-        // Corrige o bug de Fuso Horário Local, evitando que o calendário salte de dia na parte da noite
         const now = new Date();
         const offset = now.getTimezoneOffset() * 60000;
         const localISOTime = (new Date(now.getTime() - offset)).toISOString().split('T')[0];
@@ -349,23 +391,72 @@
             modalDateInput.setAttribute('min', localISOTime);
         }
 
-        // Intercetação do Envio do Formulário
         const form = document.getElementById('agendamentoForm');
         if (form) {
             form.addEventListener('submit', function(e) {
-                e.preventDefault(); // Evita que a página dê reload no GitHub Pages
+                e.preventDefault(); 
                 
-                const data = document.getElementById('dataAgendada').value;
+                const dataRaw = document.getElementById('dataAgendada').value;
                 const hora = document.getElementById('horarioAgendado').value;
                 
-                if(!data || !hora) {
+                if(!dataRaw || !hora) {
                     alert('É obrigatório abrir a caixa de horários e confirmar a data e a hora da recolha.');
                     return;
                 }
 
-                // AQUI: Os dados foram processados com sucesso pelo front-end!
-                alert('Tudo certo com o formulário no GitHub Pages!\n\nNOTA: Para que as informações do agendamento sejam salvas e enviadas na vida real, precisará agora conectar este script de submissão ao Firebase (ou API similar).');
+                const nome = document.getElementById('nome').value;
+                const cpf = document.getElementById('cpf').value;
+                const endereco = document.getElementById('endereco').value;
+                const telefone = document.getElementById('telefone').value;
+                const ubs = document.getElementById('ubs').options[document.getElementById('ubs').selectedIndex].text;
+                const medicamentos = document.getElementById('medicamentos').value;
+                const dataFormatada = document.getElementById('dataAgendada').getAttribute('data-formatada');
                 
+                let primeiroAtendimento = '';
+                const radios = document.getElementsByName('primeiroAtendimento');
+                for(let i = 0; i < radios.length; i++) {
+                    if(radios[i].checked) {
+                        primeiroAtendimento = radios[i].value;
+                        break;
+                    }
+                }
+
+                // Salva o horário no banco de dados local para bloqueá-lo nas próximas aberturas do modal
+                salvarHorarioOcupado(dataRaw, hora);
+
+                let numeroLimpo = telefone.replace(/\D/g, '');
+                if (numeroLimpo.length === 11 || numeroLimpo.length === 10) {
+                    numeroLimpo = '55' + numeroLimpo;
+                }
+
+                const mensagem = 
+`*COMPROVANTE DE AGENDAMENTO* 🏥
+Olá, ${nome}! 
+
+Seu agendamento para retirada de medicamentos foi gerado com sucesso. Guarde esta mensagem como comprovante.
+
+*📅 Data:* ${dataFormatada}
+*⏰ Horário:* ${hora}
+*📍 Local:* ${ubs}
+
+*📋 Detalhes do Cadastro:*
+• *CPF:* ${cpf}
+• *Endereço:* ${endereco}
+• *1º Atendimento:* ${primeiroAtendimento}
+• *Medicamentos:* ${medicamentos}
+
+Por favor, compareça à unidade com seu documento em mãos.`;
+
+                const textoCodificado = encodeURIComponent(mensagem);
+                const urlWhatsApp = `https://wa.me/${numeroLimpo}?text=${textoCodificado}`;
+
+                alert('Agendamento concluído! Você será redirecionado para o WhatsApp para salvar seu comprovante.');
+                window.open(urlWhatsApp, '_blank');
+                
+                form.reset();
+                document.getElementById('selectedDateTime').innerText = 'Nenhuma data/horário selecionado.';
+                document.getElementById('dataAgendada').value = '';
+                document.getElementById('horarioAgendado').value = '';
             });
         }
     });
